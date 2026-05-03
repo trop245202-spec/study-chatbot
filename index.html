@@ -3,49 +3,149 @@
 <head>
   <title>Study Buddy</title>
   <style>
-    body { font-family: Arial; text-align: center; background:#f4f4f4; }
-    .box { width:400px; margin:60px auto; background:white; padding:20px; border-radius:10px; }
-    input { width:70%; padding:10px; }
-    button { padding:10px; margin:5px; }
-    #ans { margin-top:20px; text-align:left; }
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chatbox {
+      width: 420px;
+      height: 600px;
+      background: #1e293b;
+      border-radius: 15px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .header {
+      padding: 15px;
+      text-align: center;
+      font-size: 18px;
+      background: #0ea5e9;
+      font-weight: bold;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+    }
+
+    .msg {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 75%;
+    }
+
+    .user {
+      background: #2563eb;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .bot {
+      background: #334155;
+      margin-right: auto;
+    }
+
+    .inputBox {
+      display: flex;
+      padding: 10px;
+      background: #020617;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 5px;
+      margin-top: 5px;
+    }
+
+    button {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #0ea5e9;
+      color: white;
+    }
+
+    button:hover {
+      background: #0284c7;
+    }
   </style>
 </head>
 <body>
 
-<div class="box">
-  <h2>📚 Study Buddy</h2>
+<div class="chatbox">
+  <div class="header">📚 Study Buddy</div>
 
-  <input id="q" placeholder="Ask something..." />
+  <div class="messages" id="chat"></div>
 
-  <br><br>
+  <div class="inputBox">
+    <div style="width:100%">
+      <input id="q" placeholder="Ask something..." />
 
-  <button onclick="ask('query')">Query (from knowledge)</button>
-  <button onclick="ask('question')">Question (AI)</button>
-
-  <div id="ans"></div>
+      <div class="buttons">
+        <button onclick="ask('query')">Query</button>
+        <button onclick="ask('question')">Question</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 async function ask(type) {
-  let q = document.getElementById("q").value;
+  const input = document.getElementById("q");
+  const chat = document.getElementById("chat");
 
-  document.getElementById("ans").innerText = "Thinking...";
+  const text = input.value.trim();
+  if (!text) return;
+
+  // 👤 user message
+  chat.innerHTML += `<div class="msg user">${text}</div>`;
+  input.value = "";
+
+  // 🤖 thinking
+  const tempId = Date.now();
+  chat.innerHTML += `<div class="msg bot" id="${tempId}">Thinking...</div>`;
+  chat.scrollTop = chat.scrollHeight;
 
   try {
-    let res = await fetch("/api/chat", {
+    const res = await fetch("/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ question: q, type: type })
+      body: JSON.stringify({ question: text, type: type })
     });
 
-    let data = await res.json();
+    const data = await res.json();
 
-    document.getElementById("ans").innerText = data.answer;
+    document.getElementById(tempId).innerText = data.answer;
+
   } catch {
-    document.getElementById("ans").innerText = "Error";
+    document.getElementById(tempId).innerText = "Error occurred.";
   }
+
+  chat.scrollTop = chat.scrollHeight;
 }
 </script>
 
