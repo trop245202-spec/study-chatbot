@@ -1,29 +1,52 @@
-export default function handler(req, res) {
+import fs from "fs";
+import { evaluate } from "mathjs";
+
+export default async function handler(req, res) {
   const { question } = JSON.parse(req.body || "{}");
 
   let q = question.toLowerCase();
-  let answer = "Samajh nahi aaya 😅";
 
-  // Website related answers
-  if (q.includes("fees")) {
-    answer = "Fees ₹500/month hai";
-  } 
-  else if (q.includes("time")) {
-    answer = "Timing: 5pm - 7pm";
-  }
-  else if (q.includes("course")) {
-    answer = "Maths, Science aur English available hain";
-  }
-
-  // Math solver
-  else {
+  // 🧮 Simple math
+  if (/^[0-9+\-*/(). ]+$/.test(q)) {
     try {
-      let result = eval(question);
-      answer = "Answer: " + result;
-    } catch {
-      answer = "Simple math ya website related pooch 😄";
-    }
+      let result = evaluate(q);
+      return res.json({ answer: "Answer: " + result });
+    } catch {}
   }
 
-  res.status(200).json({ answer });
+  // 📄 Load rules & knowledge
+  let rules = fs.readFileSync("./data/rules.txt", "utf-8");
+  let knowledge = fs.readFileSync("./data/knowledge.txt", "utf-8");
+
+  let prompt = `
+${rules}
+
+Use this info if needed:
+${knowledge}
+
+Question: ${question}
+`;
+
+  try {
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer YOUR_TOKEN",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ inputs: prompt })
+      }
+    );
+
+    const data = await response.json();
+
+    res.json({
+      answer: data[0]?.generated_text || "Samajh nahi aaya 😅"
+    });
+
+  } catch {
+    res.json({ answer: "Error aa gaya 😓" });
+  }
 }
