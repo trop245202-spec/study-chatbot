@@ -3,10 +3,10 @@ export default async function handler(req, res) {
     const { question } = req.body;
 
     if (!question) {
-      return res.status(400).json({ answer: "No question provided." });
+      return res.status(400).json({ answer: "Please ask a question." });
     }
 
-    // Professional English prompt
+    // 🎯 Professional English prompt
     const prompt = `
 You are a professional academic assistant.
 
@@ -14,8 +14,8 @@ Rules:
 - Answer only in English
 - Be clear and structured
 - For math problems: solve step-by-step
-- For word problems: convert to equation first, then solve
-- Keep explanation clean and easy to understand
+- For word problems: convert into equation first, then solve
+- Keep explanation simple and clean
 
 Question: ${question}
 `;
@@ -25,7 +25,7 @@ Question: ${question}
       {
         method: "POST",
         headers: {
-          "Authorization": "Bearer process.env.HF_TOKEN"
+          "Authorization": "Bearer " + process.env.HF_TOKEN,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
