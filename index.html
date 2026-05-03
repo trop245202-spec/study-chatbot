@@ -1,30 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Study Chatbot</title>
+  <title>Study Buddy</title>
 </head>
-<body>
+<body style="font-family:sans-serif; text-align:center;">
 
-  <h2>📚 Study Chatbot</h2>
+<h2>📚 Study Buddy</h2>
 
-  <input id="q" placeholder="Question likh..." />
-  <button onclick="ask()">Ask</button>
+<input id="q" placeholder="Ask your question..." />
+<button onclick="ask()">Ask</button>
 
-  <p id="ans"></p>
+<p id="ans"></p>
 
-  <script>
-    async function ask() {
-      let q = document.getElementById("q").value;
+<script>
+async function ask() {
+  let q = document.getElementById("q").value;
 
-      let res = await fetch("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({question: q})
-      });
+  let res = await fetch("/api/chat", {
+    method: "POST",
+    body: JSON.stringify({ question: q })
+  });
 
-      let data = await res.json();
-      document.getElementById("ans").innerText = data.answer;
-    }
-  </script>
+  let data = await res.json();
+  document.getElementById("ans").innerText = data.answer;
+}
+</script>
 
 </body>
 </html>
