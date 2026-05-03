@@ -3,69 +3,64 @@ import fs from "fs";
 export default async function handler(req, res) {
   try {
     let body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+
     const question = body?.question;
+    const type = body?.type;
 
     if (!question) {
-      return res.status(400).json({ answer: "Please ask a question." });
+      return res.status(400).json({ answer: "Ask something first." });
     }
 
-    const q = question.toLowerCase();
-
-    // 📄 read knowledge
+    // 📄 READ KNOWLEDGE
     const knowledge = fs.readFileSync(process.cwd() + "/data/knowledge.txt", "utf-8");
 
-    let answerFromFile = "";
+    // 🔍 QUERY MODE (file search)
+    if (type === "query") {
+      let lowerQ = question.toLowerCase();
 
-    // 🔍 keyword-based search
-    if (q.includes("fee")) {
-      answerFromFile = knowledge.match(/fees?.*?\./i)?.[0] || "";
-    } else if (q.includes("time")) {
-      answerFromFile = knowledge.match(/time.*?\./i)?.[0] || "";
-    } else if (q.includes("course")) {
-      answerFromFile = knowledge.match(/courses?.*?\./i)?.[0] || "";
+      let sentences = knowledge.split(".");
+      let found = sentences.find(s => s.toLowerCase().includes(lowerQ));
+
+      if (found) {
+        return res.status(200).json({ answer: found.trim() });
+      } else {
+        return res.status(200).json({ answer: "Not found in knowledge." });
+      }
     }
 
-    // ✅ agar mil gaya → return
-    if (answerFromFile) {
-      return res.status(200).json({ answer: answerFromFile });
+    // 🤖 QUESTION MODE (AI)
+    if (type === "question") {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "openchat/openchat-3.5",
+          messages: [
+            {
+              role: "system",
+              content: "You are a helpful assistant. Solve math step-by-step and answer clearly in English."
+            },
+            {
+              role: "user",
+              content: question
+            }
+          ]
+        })
+      });
+
+      const data = await response.json();
+
+      let answer = data?.choices?.[0]?.message?.content;
+
+      if (!answer) {
+        answer = "AI not responding. Try again.";
+      }
+
+      return res.status(200).json({ answer });
     }
-
-    // 🧠 maths detect (important 🔥)
-    const isMath = /[0-9+\-*/=()]/.test(q);
-
-    // 🤖 AI call
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "openchat/openchat-3.5",
-        messages: [
-          {
-            role: "system",
-            content: isMath
-              ? "You are a math teacher. Solve step-by-step clearly."
-              : "You are a helpful assistant. Answer clearly in English."
-          },
-          {
-            role: "user",
-            content: question
-          }
-        ]
-      })
-    });
-
-    const data = await response.json();
-
-    let answer = data?.choices?.[0]?.message?.content;
-
-    if (!answer) {
-      answer = "Sorry, I couldn't find the answer.";
-    }
-
-    return res.status(200).json({ answer });
 
   } catch (err) {
     return res.status(500).json({
