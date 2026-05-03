@@ -3,33 +3,11 @@
 <head>
   <title>Study Buddy</title>
   <style>
-    body {
-      font-family: Arial;
-      background: #f4f4f4;
-      text-align: center;
-    }
-
-    .box {
-      width: 400px;
-      margin: 60px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-    }
-
-    input {
-      width: 70%;
-      padding: 10px;
-    }
-
-    button {
-      padding: 10px;
-    }
-
-    #ans {
-      margin-top: 20px;
-      text-align: left;
-    }
+    body { font-family: Arial; text-align: center; background:#f4f4f4; }
+    .box { width:400px; margin:60px auto; background:white; padding:20px; border-radius:10px; }
+    input { width:70%; padding:10px; }
+    button { padding:10px; margin:5px; }
+    #ans { margin-top:20px; text-align:left; }
   </style>
 </head>
 <body>
@@ -38,13 +16,17 @@
   <h2>📚 Study Buddy</h2>
 
   <input id="q" placeholder="Ask something..." />
-  <button onclick="ask()">Ask</button>
+
+  <br><br>
+
+  <button onclick="ask('query')">Query (from knowledge)</button>
+  <button onclick="ask('question')">Question (AI)</button>
 
   <div id="ans"></div>
 </div>
 
 <script>
-async function ask() {
+async function ask(type) {
   let q = document.getElementById("q").value;
 
   document.getElementById("ans").innerText = "Thinking...";
@@ -55,14 +37,14 @@ async function ask() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ question: q })
+      body: JSON.stringify({ question: q, type: type })
     });
 
     let data = await res.json();
 
     document.getElementById("ans").innerText = data.answer;
   } catch {
-    document.getElementById("ans").innerText = "Error. Try again.";
+    document.getElementById("ans").innerText = "Error";
   }
 }
 </script>
