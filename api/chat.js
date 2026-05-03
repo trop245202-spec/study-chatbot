@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     }
 
     // 📄 Read knowledge
-    const knowledge = fs.readFileSync("./data/knowledge.txt", "utf-8");
+    const knowledge = fs.readFileSync(process.cwd() + "/data/knowledge.txt", "utf-8");;
 
     // 🔍 simple keyword search
     let answerFromFile = "";
