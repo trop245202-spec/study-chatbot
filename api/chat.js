@@ -1,12 +1,36 @@
+import fs from "fs";
+
 export default async function handler(req, res) {
   try {
     let body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const question = body?.question;
+    const question = body?.question?.toLowerCase();
 
     if (!question) {
-      return res.status(400).json({ answer: "No question provided." });
+      return res.status(400).json({ answer: "Please ask a question." });
     }
 
+    // 📄 Read knowledge
+    const knowledge = fs.readFileSync("./data/knowledge.txt", "utf-8");
+
+    // 🔍 simple keyword search
+    let answerFromFile = "";
+
+    if (question.includes("fee")) {
+      answerFromFile = knowledge.match(/fees?.*?\./i)?.[0] || "";
+    } else if (question.includes("time")) {
+      answerFromFile = knowledge.match(/time.*?\./i)?.[0] || "";
+    } else if (question.includes("course")) {
+      answerFromFile = knowledge.match(/courses?.*?\./i)?.[0] || "";
+    }
+
+    // ✅ if found in file
+    if (answerFromFile) {
+      return res.status(200).json({
+        answer: answerFromFile
+      });
+    }
+
+    // 🤖 otherwise use AI
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -14,11 +38,11 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3-8b-instruct",
+        model: "openchat/openchat-3.5",
         messages: [
           {
             role: "system",
-            content: "You are a helpful math and study assistant. Always answer clearly. Solve math step by step."
+            content: "You are a helpful academic assistant. Answer clearly in English."
           },
           {
             role: "user",
@@ -30,17 +54,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    console.log("FULL DATA:", JSON.stringify(data)); // 🔍 debug
-
-    let answer = "No response from AI.";
-
-    if (data.choices && data.choices.length > 0) {
-      answer = data.choices[0].message?.content || answer;
-    } else if (data.error) {
-      answer = "API Error: " + data.error.message;
-    } else {
-      answer = JSON.stringify(data); // fallback
-    }
+    let answer = data?.choices?.[0]?.message?.content || "No response.";
 
     return res.status(200).json({ answer });
 
