@@ -1,21 +1,17 @@
 export default async function handler(req, res) {
   try {
-    const { question } = req.body;
+    // 🧾 parse body safely
+    let body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const question = body?.question;
 
     if (!question) {
-      return res.status(400).json({ answer: "Please ask a question." });
+      return res.status(400).json({ answer: "No question provided." });
     }
 
-    // 🎯 Professional English prompt
     const prompt = `
-You are a professional academic assistant.
-
-Rules:
-- Answer only in English
-- Be clear and structured
-- For math problems: solve step-by-step
-- For word problems: convert into equation first, then solve
-- Keep explanation simple and clean
+You are a helpful academic assistant.
+Answer only in English.
+Solve math step-by-step.
 
 Question: ${question}
 `;
@@ -28,25 +24,26 @@ Question: ${question}
           "Authorization": "Bearer " + process.env.HF_TOKEN,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          inputs: prompt
-        })
+        body: JSON.stringify({ inputs: prompt })
       }
     );
 
     const data = await response.json();
 
-    let answer = "Sorry, I couldn't understand.";
+    console.log("HF DATA:", data); // 🔍 log check ke liye
+
+    let answer = "Something went wrong.";
 
     if (Array.isArray(data)) {
       answer = data[0]?.generated_text || answer;
     } else if (data.error) {
-      answer = "Model is loading, please try again.";
+      answer = "Model loading or API error: " + data.error;
     }
 
     return res.status(200).json({ answer });
 
-  } catch (error) {
-    return res.status(500).json({ answer: "Server error occurred." });
+  } catch (err) {
+    console.error("ERROR:", err);
+    return res.status(500).json({ answer: "Server error: " + err.message });
   }
 }
