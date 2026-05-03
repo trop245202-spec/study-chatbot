@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     }
 
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct",
+      "https://api-inference.huggingface.co/models/google/flan-t5-base",
       {
         method: "POST",
         headers: {
@@ -23,10 +23,15 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // 🔥 DIRECT DEBUG RESPONSE
-    return res.status(200).json({
-      answer: JSON.stringify(data)
-    });
+    let answer = "No response";
+
+    if (Array.isArray(data)) {
+      answer = data[0]?.generated_text || answer;
+    } else if (data.error) {
+      answer = data.error;
+    }
+
+    return res.status(200).json({ answer });
 
   } catch (err) {
     return res.status(500).json({
