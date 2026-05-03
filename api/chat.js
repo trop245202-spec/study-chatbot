@@ -18,7 +18,7 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "You are a helpful academic assistant. Answer in English and solve math step by step."
+            content: "You are a helpful math and study assistant. Always answer clearly. Solve math step by step."
           },
           {
             role: "user",
@@ -30,8 +30,17 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    const answer =
-      data?.choices?.[0]?.message?.content || "No response";
+    console.log("FULL DATA:", JSON.stringify(data)); // 🔍 debug
+
+    let answer = "No response from AI.";
+
+    if (data.choices && data.choices.length > 0) {
+      answer = data.choices[0].message?.content || answer;
+    } else if (data.error) {
+      answer = "API Error: " + data.error.message;
+    } else {
+      answer = JSON.stringify(data); // fallback
+    }
 
     return res.status(200).json({ answer });
 
