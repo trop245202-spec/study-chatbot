@@ -2,26 +2,65 @@
 <html>
 <head>
   <title>Study Buddy</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f5f5f5;
+      text-align: center;
+    }
+
+    .chat-box {
+      width: 400px;
+      margin: 50px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    input {
+      width: 70%;
+      padding: 10px;
+    }
+
+    button {
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    #ans {
+      margin-top: 20px;
+      text-align: left;
+    }
+  </style>
 </head>
-<body style="font-family:sans-serif; text-align:center;">
+<body>
 
-<h2>📚 Study Buddy</h2>
+<div class="chat-box">
+  <h2>📚 Study Buddy</h2>
 
-<input id="q" placeholder="Ask your question..." />
-<button onclick="ask()">Ask</button>
+  <input id="q" placeholder="Ask your question..." />
+  <button onclick="ask()">Ask</button>
 
-<p id="ans"></p>
+  <div id="ans"></div>
+</div>
 
 <script>
 async function ask() {
   let q = document.getElementById("q").value;
 
+  document.getElementById("ans").innerText = "Thinking...";
+
   let res = await fetch("/api/chat", {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({ question: q })
   });
 
   let data = await res.json();
+
   document.getElementById("ans").innerText = data.answer;
 }
 </script>
