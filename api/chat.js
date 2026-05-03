@@ -1,70 +1,52 @@
-import fs from "fs";
-
-export default async function handler(req, res) {
+if (type === "question") {
   try {
-    let body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "openchat/openchat-3.5",
+        messages: [
+          {
+            role: "system",
+            content: "You are a math and study assistant. Solve step-by-step clearly."
+          },
+          {
+            role: "user",
+            content: question
+          }
+        ]
+      })
+    });
 
-    const question = body?.question;
-    const type = body?.type;
+    const text = await response.text(); // 👈 IMPORTANT
 
-    if (!question) {
-      return res.status(400).json({ answer: "Ask something first." });
-    }
-
-    // 📄 READ KNOWLEDGE
-    const knowledge = fs.readFileSync(process.cwd() + "/data/knowledge.txt", "utf-8");
-
-    // 🔍 QUERY MODE (file search)
-    if (type === "query") {
-      let lowerQ = question.toLowerCase();
-
-      let sentences = knowledge.split(".");
-      let found = sentences.find(s => s.toLowerCase().includes(lowerQ));
-
-      if (found) {
-        return res.status(200).json({ answer: found.trim() });
-      } else {
-        return res.status(200).json({ answer: "Not found in knowledge." });
-      }
-    }
-
-    // 🤖 QUESTION MODE (AI)
-    if (type === "question") {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "openchat/openchat-3.5",
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful assistant. Solve math step-by-step and answer clearly in English."
-            },
-            {
-              role: "user",
-              content: question
-            }
-          ]
-        })
+    // 🔍 debug: agar HTML ya empty aaye
+    if (!text || text.startsWith("<")) {
+      return res.status(200).json({
+        answer: "AI service not responding properly. Try again."
       });
-
-      const data = await response.json();
-
-      let answer = data?.choices?.[0]?.message?.content;
-
-      if (!answer) {
-        answer = "AI not responding. Try again.";
-      }
-
-      return res.status(200).json({ answer });
     }
+
+    const data = JSON.parse(text);
+
+    let answer = "";
+
+    if (data.choices && data.choices.length > 0) {
+      answer = data.choices[0].message?.content || "";
+    }
+
+    if (!answer) {
+      answer = "No answer received from AI.";
+    }
+
+    return res.status(200).json({ answer });
 
   } catch (err) {
-    return res.status(500).json({
-      answer: "Server error: " + err.message
+    return res.status(200).json({
+      answer: "AI error: " + err.message
     });
   }
 }
