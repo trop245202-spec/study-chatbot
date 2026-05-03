@@ -11,7 +11,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ answer: "Please ask something." });
     }
 
-    // 📄 LOAD KNOWLEDGE SAFELY
+    // 📄 LOAD KNOWLEDGE
     let knowledge = "";
     try {
       knowledge = fs.readFileSync(process.cwd() + "/data/knowledge.txt", "utf-8");
@@ -20,11 +20,10 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // 📚 QUERY MODE (FILE SEARCH)
+    // 📚 QUERY MODE
     // =======================
     if (type === "query") {
       const lowerQ = question.toLowerCase();
-
       const sentences = knowledge.split(".");
       const found = sentences.find(s => s.toLowerCase().includes(lowerQ));
 
@@ -36,7 +35,7 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // ⚡ QUICK MATH SOLVER (NO AI NEEDED)
+    // ⚡ SIMPLE MATH
     // =======================
     if (/^[0-9+\-*/(). ]+$/.test(question)) {
       try {
@@ -46,7 +45,12 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // 🤖 AI MODE (SAFE)
+    // 🧠 DETECT EQUATION
+    // =======================
+    const isEquation = /[a-zA-Z]/.test(question) && /=/.test(question);
+
+    // =======================
+    // 🤖 AI MODE
     // =======================
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -60,7 +64,9 @@ export default async function handler(req, res) {
           messages: [
             {
               role: "system",
-              content: "You are a helpful assistant. Answer clearly and solve problems step-by-step."
+              content: isEquation
+                ? "You are a math expert. Solve equations step-by-step and give final answer clearly."
+                : "You are a helpful assistant. Answer clearly in English."
             },
             {
               role: "user",
@@ -78,13 +84,13 @@ export default async function handler(req, res) {
 
       const data = JSON.parse(text);
 
-      const answer = data?.choices?.[0]?.message?.content;
+      let answer = data?.choices?.[0]?.message?.content;
 
-      if (answer) {
-        return res.status(200).json({ answer });
-      } else {
-        return res.status(200).json({ answer: "AI did not respond properly." });
+      if (!answer) {
+        answer = "AI did not respond properly.";
       }
+
+      return res.status(200).json({ answer });
 
     } catch (err) {
       return res.status(200).json({ answer: "AI error. Try again." });
