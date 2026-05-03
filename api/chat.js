@@ -3,34 +3,37 @@ import fs from "fs";
 export default async function handler(req, res) {
   try {
     let body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const question = body?.question?.toLowerCase();
+    const question = body?.question;
 
     if (!question) {
       return res.status(400).json({ answer: "Please ask a question." });
     }
 
-    // 📄 Read knowledge
-    const knowledge = fs.readFileSync(process.cwd() + "/data/knowledge.txt", "utf-8");;
+    const q = question.toLowerCase();
 
-    // 🔍 simple keyword search
+    // 📄 read knowledge
+    const knowledge = fs.readFileSync(process.cwd() + "/data/knowledge.txt", "utf-8");
+
     let answerFromFile = "";
 
-    if (question.includes("fee")) {
+    // 🔍 keyword-based search
+    if (q.includes("fee")) {
       answerFromFile = knowledge.match(/fees?.*?\./i)?.[0] || "";
-    } else if (question.includes("time")) {
+    } else if (q.includes("time")) {
       answerFromFile = knowledge.match(/time.*?\./i)?.[0] || "";
-    } else if (question.includes("course")) {
+    } else if (q.includes("course")) {
       answerFromFile = knowledge.match(/courses?.*?\./i)?.[0] || "";
     }
 
-    // ✅ if found in file
+    // ✅ agar mil gaya → return
     if (answerFromFile) {
-      return res.status(200).json({
-        answer: answerFromFile
-      });
+      return res.status(200).json({ answer: answerFromFile });
     }
 
-    // 🤖 otherwise use AI
+    // 🧠 maths detect (important 🔥)
+    const isMath = /[0-9+\-*/=()]/.test(q);
+
+    // 🤖 AI call
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -42,7 +45,9 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "You are a helpful academic assistant. Answer clearly in English."
+            content: isMath
+              ? "You are a math teacher. Solve step-by-step clearly."
+              : "You are a helpful assistant. Answer clearly in English."
           },
           {
             role: "user",
@@ -54,7 +59,11 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    let answer = data?.choices?.[0]?.message?.content || "No response.";
+    let answer = data?.choices?.[0]?.message?.content;
+
+    if (!answer) {
+      answer = "Sorry, I couldn't find the answer.";
+    }
 
     return res.status(200).json({ answer });
 
