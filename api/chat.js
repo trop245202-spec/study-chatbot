@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     let body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
     const question = body?.question?.trim();
-    const type = body?.type; // 🔥 query or question
+    const type = body?.type;
 
     if (!question) {
       return res.status(400).json({ answer: "Please ask something." });
@@ -44,27 +44,9 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // 🟢 QUESTION MODE (MATH + AI)
+    // 🟢 QUESTION MODE (ONLY AI)
     // =======================
     if (type === "question") {
-
-      // ⚡ SMART MATH DETECTION
-      let cleanMath = question
-        .toLowerCase()
-        .replace(/what is|calculate|find|solve/g, "")
-        .replace(/[^0-9+\-*/(). ]/g, "")
-        .trim();
-
-      if (cleanMath && /^[0-9+\-*/(). ]+$/.test(cleanMath)) {
-        try {
-          const result = eval(cleanMath);
-          return res.status(200).json({
-            answer: "Answer: " + result
-          });
-        } catch {}
-      }
-
-      // 🤖 AI CALL
       try {
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -80,7 +62,7 @@ export default async function handler(req, res) {
                 {
                   role: "system",
                   content:
-                    "You are a helpful math and study assistant. Solve step-by-step and explain clearly."
+                    "You are a helpful math and study assistant. Solve math step-by-step and explain clearly."
                 },
                 {
                   role: "user",
@@ -93,38 +75,50 @@ export default async function handler(req, res) {
 
         const text = await response.text();
 
-        // ❌ HTML / empty response handle
+        // 🔍 handle HTML / empty
         if (!text || text.startsWith("<")) {
           return res.status(200).json({
             answer: "AI service issue. Try again."
           });
         }
 
-        const data = JSON.parse(text);
-
-        let answer = data?.choices?.[0]?.message?.content;
-
-        if (!answer) {
-          answer = "AI did not respond properly.";
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          return res.status(200).json({
+            answer: "Invalid AI response."
+          });
         }
 
-        return res.status(200).json({ answer });
+        const answer = data?.choices?.[0]?.message?.content;
 
-      } catch {
+        if (answer) {
+          return res.status(200).json({ answer });
+        } else if (data?.error) {
+          return res.status(200).json({
+            answer: "API Error: " + data.error.message
+          });
+        } else {
+          return res.status(200).json({
+            answer: "AI did not respond properly."
+          });
+        }
+
+      } catch (err) {
         return res.status(200).json({
-          answer: "AI error. Try again."
+          answer: "AI error: " + err.message
         });
       }
     }
 
-    // fallback
     return res.status(200).json({
       answer: "Invalid request type."
     });
 
-  } catch {
+  } catch (err) {
     return res.status(200).json({
-      answer: "Server error. Refresh page."
+      answer: "Server error."
     });
   }
 }
