@@ -15,9 +15,7 @@ export default async function handler(req, res) {
     let knowledge = "";
     try {
       knowledge = fs.readFileSync(process.cwd() + "/data/knowledge.txt", "utf-8");
-    } catch {
-      knowledge = "";
-    }
+    } catch {}
 
     // =======================
     // 📚 QUERY MODE
@@ -35,22 +33,29 @@ export default async function handler(req, res) {
     }
 
     // =======================
-    // ⚡ SIMPLE MATH
+    // ⚡ SMART MATH DETECTION
     // =======================
-    if (/^[0-9+\-*/(). ]+$/.test(question)) {
+
+    let cleanMath = question
+      .toLowerCase()
+      .replace(/what is|calculate|find|solve/g, "")
+      .replace(/[^0-9+\-*/(). ]/g, "")
+      .trim();
+
+    if (cleanMath && /^[0-9+\-*/(). ]+$/.test(cleanMath)) {
       try {
-        const result = eval(question);
+        const result = eval(cleanMath);
         return res.status(200).json({ answer: "Answer: " + result });
       } catch {}
     }
 
     // =======================
-    // 🧠 DETECT EQUATION
+    // 🧠 EQUATION DETECT
     // =======================
     const isEquation = /[a-zA-Z]/.test(question) && /=/.test(question);
 
     // =======================
-    // 🤖 AI MODE
+    // 🤖 AI MODE (LAST OPTION)
     // =======================
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -65,8 +70,8 @@ export default async function handler(req, res) {
             {
               role: "system",
               content: isEquation
-                ? "You are a math expert. Solve equations step-by-step and give final answer clearly."
-                : "You are a helpful assistant. Answer clearly in English."
+                ? "You are a math expert. Solve equations step-by-step."
+                : "You are a helpful assistant."
             },
             {
               role: "user",
@@ -84,19 +89,19 @@ export default async function handler(req, res) {
 
       const data = JSON.parse(text);
 
-      let answer = data?.choices?.[0]?.message?.content;
+      const answer = data?.choices?.[0]?.message?.content;
 
-      if (!answer) {
-        answer = "AI did not respond properly.";
+      if (answer) {
+        return res.status(200).json({ answer });
+      } else {
+        return res.status(200).json({ answer: "AI did not respond properly." });
       }
 
-      return res.status(200).json({ answer });
-
-    } catch (err) {
+    } catch {
       return res.status(200).json({ answer: "AI error. Try again." });
     }
 
-  } catch (err) {
+  } catch {
     return res.status(200).json({ answer: "Server problem. Refresh page." });
   }
 }
