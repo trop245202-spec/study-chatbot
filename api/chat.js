@@ -1,52 +1,52 @@
-import fs from "fs";
-import { evaluate } from "mathjs";
-
 export default async function handler(req, res) {
-  const { question } = JSON.parse(req.body || "{}");
+  try {
+    const { question } = req.body;
 
-  let q = question.toLowerCase();
+    if (!question) {
+      return res.status(400).json({ answer: "No question provided." });
+    }
 
-  // 🧮 Simple math
-  if (/^[0-9+\-*/(). ]+$/.test(q)) {
-    try {
-      let result = evaluate(q);
-      return res.json({ answer: "Answer: " + result });
-    } catch {}
-  }
+    // Professional English prompt
+    const prompt = `
+You are a professional academic assistant.
 
-  // 📄 Load rules & knowledge
-  let rules = fs.readFileSync("./data/rules.txt", "utf-8");
-  let knowledge = fs.readFileSync("./data/knowledge.txt", "utf-8");
-
-  let prompt = `
-${rules}
-
-Use this info if needed:
-${knowledge}
+Rules:
+- Answer only in English
+- Be clear and structured
+- For math problems: solve step-by-step
+- For word problems: convert to equation first, then solve
+- Keep explanation clean and easy to understand
 
 Question: ${question}
 `;
 
-  try {
     const response = await fetch(
       "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct",
       {
         method: "POST",
         headers: {
-          "Authorization": "Bearer YOUR_TOKEN",
+          "Authorization": "Bearer process.env.HF_TOKEN"
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ inputs: prompt })
+        body: JSON.stringify({
+          inputs: prompt
+        })
       }
     );
 
     const data = await response.json();
 
-    res.json({
-      answer: data[0]?.generated_text || "Samajh nahi aaya 😅"
-    });
+    let answer = "Sorry, I couldn't understand.";
 
-  } catch {
-    res.json({ answer: "Error aa gaya 😓" });
+    if (Array.isArray(data)) {
+      answer = data[0]?.generated_text || answer;
+    } else if (data.error) {
+      answer = "Model is loading, please try again.";
+    }
+
+    return res.status(200).json({ answer });
+
+  } catch (error) {
+    return res.status(500).json({ answer: "Server error occurred." });
   }
 }
