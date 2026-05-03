@@ -21,21 +21,30 @@ export default async function handler(req, res) {
       }
     );
 
-    const data = await response.json();
+    const text = await response.text(); // 👈 IMPORTANT
+
+    // 🔍 check if HTML aaya
+    if (text.startsWith("<")) {
+      return res.status(200).json({
+        answer: "API returned HTML error. Model may be blocked or token issue."
+      });
+    }
+
+    const data = JSON.parse(text);
 
     let answer = "No response";
 
     if (Array.isArray(data)) {
       answer = data[0]?.generated_text || answer;
     } else if (data.error) {
-      answer = data.error;
+      answer = "Error: " + data.error;
     }
 
     return res.status(200).json({ answer });
 
   } catch (err) {
     return res.status(500).json({
-      answer: "ERROR: " + err.message
+      answer: "Server crash: " + err.message
     });
   }
 }
